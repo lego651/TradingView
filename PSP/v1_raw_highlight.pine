@@ -1,0 +1,43 @@
+//@version=5
+indicator("Dynamic PSP Candle Detector (Gray Candle & Rectangle)", overlay=true)
+
+// Detect active chart symbol
+active_symbol = syminfo.tickerid
+
+// Set a default constant string for the second symbol
+second_symbol_input = input.symbol("FX:GBPUSD", title="Second Chart Symbol")  // Default input (must be constant)
+
+// Auto-assign the second symbol dynamically if the user hasn't changed it
+second_symbol = second_symbol_input
+
+if second_symbol_input == "FX:GBPUSD"  // Only override if the user hasn't manually changed it
+    second_symbol := active_symbol == "FX:EURUSD" ? "FX:GBPUSD" : 
+                     active_symbol == "FX:GBPUSD" ? "FX:EURUSD" : 
+                     "FX:GBPUSD"
+
+// Request Data for Active and Second Chart
+active_open = request.security(active_symbol, timeframe.period, open)
+active_close = request.security(active_symbol, timeframe.period, close)
+
+second_open = request.security(second_symbol, timeframe.period, open)
+second_close = request.security(second_symbol, timeframe.period, close)
+
+// Check if data is available for both symbols
+data_available = not na(active_open) and not na(second_open)
+
+// Define PSP Candle Conditions
+bullish_psp = data_available and (active_close > active_open) and (second_close < second_open)
+bearish_psp = data_available and (active_close < active_open) and (second_close > second_open)
+
+// PSP Candle Detected
+psp_candle = bullish_psp or bearish_psp
+
+// Plot signals on chart
+plotshape(bullish_psp, location=location.belowbar, color=color.green, style=shape.labelup, size=size.large, title="Bullish PSP", text="B-PSP")
+plotshape(bearish_psp, location=location.abovebar, color=color.red, style=shape.labeldown, size=size.large, title="Bearish PSP", text="S-PSP")
+
+// Background highlight for detected candles
+bgcolor(bullish_psp ? color.new(color.green, 85) : bearish_psp ? color.new(color.red, 85) : na, title="PSP Background Highlight")
+
+alertcondition(bullish_psp, title="Bullish PSP Detected", message="Bullish PSP detected!")
+alertcondition(bearish_psp, title="Bearish PSP Detected", message="Bearish PSP detected!") 
